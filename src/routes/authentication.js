@@ -92,7 +92,7 @@ router.post(
 ///////////
 
 router.get('/traerusuario/:cuil_cuit', async(req,res)=>{
-    cuil_cuit = req.params.cuil_cuit
+   const cuil_cuit = req.params.cuil_cuit
     const usuario = await pool.query('select * from users where cuil_cuit= ? ',[cuil_cuit])
     res.json(usuario)
     
@@ -113,25 +113,6 @@ router.get('/noexito',(req,res)=>{
 
 
 
-
-
-
-
-
-
-
-router.get('/logout', (req,res) =>{
-    req.logout()
-    res.redirect('/signin')
-})
-
-
-
-
-
-
-
-
 //  ACCIONES NIVEL 3
 
 router.post('/agregarunusuario',passport.authenticate('local.signupnivel3', {
@@ -141,17 +122,6 @@ router.post('/agregarunusuario',passport.authenticate('local.signupnivel3', {
 
 }))
 
-//probando  json web token 
-router.get('/loging',async(req,res)  =>{
-    const { cuil_cuit, password } = req.body;
-   
-    const rows = await pool.query('SELECT * FROM users' )
-    console.log('pide')
-    
-res.json(rows)
-
-
-})
 
 router.get('/prueba',async(req,res)  =>{
     /*const { cuil_cuit, algo, token } = req.body;*/

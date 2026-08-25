@@ -1,112 +1,142 @@
 import jwt from "jsonwebtoken";
 
-// =======================
-// Helper para verificar token
-// =======================
-function verifyToken(req, secret) {
-  const authorization = req.get("authorization");
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return null;
-  }
+// =====================================================
+// VERIFICAR TOKEN JWT
+// =====================================================
 
-  const token = authorization.substring(7);
+function verifyToken(req) {
+    const authorization = req.get("authorization");
 
-  try {
-    return jwt.verify(token, secret);
-  } catch {
-    return null;
-  }
-}
+    // Verificar que exista el header Authorization
+    // y que utilice el formato Bearer
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+        return null;
+    }
 
-
-export const verifyTokenclin = (req, secret) => {
-  const authorization = req.get('authorization')
-
-  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
-    const token = authorization.substring(7)
+    // Obtener solamente el token
+    const token = authorization.substring(7);
 
     try {
-      return jwt.verify(token, secret)
+        // Verificar el token utilizando la clave del .env
+        return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
-      return null
+        return null;
     }
-  }
-
-  return null
 }
 
 
-// =======================
-// Middlewares
-// =======================
+// =====================================================
+// MIDDLEWARE - USUARIO AUTENTICADO
+// =====================================================
+
 export function isLoggedInn(req, res, next) {
-  const decodedToken = verifyToken(req, "fideicomisocs121");
 
-  if (!decodedToken?.id) {
-    return res.status(401).send("error login");
-  }
+    const decodedToken = verifyToken(req);
 
-  next();
+    if (!decodedToken?.id) {
+        return res.status(401).json({
+            message: "No autorizado"
+        });
+    }
+
+    next();
 }
+
+
+// =====================================================
+// MIDDLEWARE - NIVEL 2
+// =====================================================
 
 export function isLoggedInn2(req, res, next) {
-  const decodedToken = verifyToken(req, "fideicomisocs121");
 
-  if (!decodedToken?.id || decodedToken.nivel !== 2) {
-    return res.status(401).send("error login");
-  }
+    const decodedToken = verifyToken(req);
 
-  next();
+    if (!decodedToken?.id || decodedToken.nivel !== 2) {
+        return res.status(401).json({
+            message: "No autorizado"
+        });
+    }
+
+    next();
 }
+
+
+// =====================================================
+// MIDDLEWARE - NIVELES 2, 3 Y 4
+// =====================================================
 
 export function isLoggedInn4(req, res, next) {
-  const decodedToken = verifyToken(req, "fideicomisocs121");
 
-  if (
-    !decodedToken?.id ||
-    ![2, 3, 4].includes(decodedToken.nivel)
-  ) {
-    return res.status(401).send("error login");
-  }
+    const decodedToken = verifyToken(req);
 
-  next();
+    if (
+        !decodedToken?.id ||
+        ![2, 3, 4].includes(decodedToken.nivel)
+    ) {
+        return res.status(401).json({
+            message: "No autorizado"
+        });
+    }
+
+    next();
 }
+
+
+// =====================================================
+// MIDDLEWARE - NIVEL 5
+// =====================================================
 
 export function isLoggedInn5(req, res, next) {
-  const decodedToken = verifyToken(req, "fideicomisocs121");
 
-  if (!decodedToken?.id || decodedToken.nivel !== 5) {
-    return res.status(401).send("error login");
-  }
+    const decodedToken = verifyToken(req);
 
-  next();
+    if (!decodedToken?.id || decodedToken.nivel !== 5) {
+        return res.status(401).json({
+            message: "No autorizado"
+        });
+    }
+
+    next();
 }
+
+
+// =====================================================
+// MIDDLEWARE - CLIENTE AUTENTICADO
+// =====================================================
 
 export function isLoggedInncli(req, res, next) {
-  const decodedToken = verifyTokenclin(req, "clin123")
 
-  console.log(decodedToken)
+    const decodedToken = verifyToken(req);
 
-  if (!decodedToken?.id) {
-    return res.status(401).send("error login")
-  }
+    if (!decodedToken?.id) {
+        return res.status(401).json({
+            message: "No autorizado"
+        });
+    }
 
-  next()
+    next();
 }
 
-// =======================
-// Passport
-// =======================
+
+// =====================================================
+// PASSPORT - SESIONES
+// =====================================================
+
 export function isLoggedIn(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  return res.redirect("/signin");
+
+    if (req.isAuthenticated()) {
+        return next();
+    }
+
+    return res.redirect("/signin");
 }
+
 
 export function isNotLoggedIn(req, res, next) {
-  if (!req.isAuthenticated()) {
-    return next();
-  }
-  return res.redirect("/profile");
+
+    if (!req.isAuthenticated()) {
+        return next();
+    }
+
+    return res.redirect("/profile");
 }
