@@ -4,7 +4,11 @@ const router = express.Router();
 import cron from "node-cron";
 import { } from "../lib/auth.js";
 import pool from "../database.js";
+import {
+  isLoggedInn,
 
+} from "../lib/auth.js";
+const API = process.env.VITE_API_URL;
 //import { sendWhatsappMessage } from "./whatsapclient.js";
 
 import { Payment } from "mercadopago";
@@ -34,9 +38,9 @@ router.post("/crear-preferencia", async (req, res) => {
           },
         ],
  back_urls: {
-  success: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/success",
-  failure: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/failure",
-  pending: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/pending",
+  success: API + "clinica/success",
+  failure: API + "clinica/failure",
+  pending: API + "clinica/pending",
 },
 auto_return: "approved",
       },
@@ -121,7 +125,7 @@ router.get('/traerEmpresas/', async (req, res) => {
 
 })
 
-router.get('/traerpacientes/:id', async (req, res) => {
+router.get('/traerpacientes/:id',isLoggedInn, async (req, res) => {
 const    id = req.params.id
     const usuario = await pool.query('select * from pacientes where baja="No" and id_usuario= ? ', [id])
    
@@ -260,7 +264,7 @@ router.get('/traerturnos',  async (req, res) => {
   }
 });
 
-router.post('/modificarusuario',  async (req, res) => {
+router.post('/modificarusuario',isLoggedInn,  async (req, res) => {
   try {
     const { id, ...datos } = req.body;
 
@@ -1375,7 +1379,8 @@ const preference = new Preference(client);
           },
         ],
         external_reference: String(id_turno), // MUY IMPORTANTE
-        notification_url: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/webhook",
+       
+        notification_url: API+"clinica/webhook",
      back_urls: {
   success: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/success",
   failure: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/failure",
