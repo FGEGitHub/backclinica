@@ -32,7 +32,7 @@ function verifyToken(req) {
 // MIDDLEWARE - USUARIO AUTENTICADO
 // =====================================================
 
-export function isLoggedInn(req, res, next) {
+export function isLoggedInncli(req, res, next) {
 
     const decodedToken = verifyToken(req);
 console.log(decodedToken)
