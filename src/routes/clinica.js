@@ -5,10 +5,10 @@ import cron from "node-cron";
 import { } from "../lib/auth.js";
 import pool from "../database.js";
 import {
-  isLoggedInn,
+  isLoggedInncli,
 
 } from "../lib/auth.js";
-const API = process.env.VITE_API_URL;
+
 //import { sendWhatsappMessage } from "./whatsapclient.js";
 
 import { Payment } from "mercadopago";
@@ -17,7 +17,7 @@ import { Preference, MercadoPagoConfig } from "mercadopago";
 
 dotenv.config();
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
-
+const API = process.env.VITE_API_URL;
 
 const client = new MercadoPagoConfig({
   accessToken: MP_ACCESS_TOKEN,
@@ -101,14 +101,14 @@ try {
 
  
 
-router.get('/traerusuario/:cuil_cuit', async (req, res) => {
-    const cuil_cuit = req.params.cuil_cuit
-   console.log(cuil_cuit)
+router.get('/traerusuario/:usuario', async (req, res) => {
+    const usuario = req.params.usuario
+  
 
 
-    const usuario = await pool.query('select * from usuarios where usuario= ? ', [cuil_cuit])
-   
-    res.json(usuario)
+    const user = await pool.query('select * from usuarios where usuario= ? ', [usuario])
+  
+    res.json(user)
 
 
 })
@@ -125,7 +125,7 @@ router.get('/traerEmpresas/', async (req, res) => {
 
 })
 
-router.get('/traerpacientes/:id',isLoggedInn, async (req, res) => {
+router.get('/traerpacientes/:id',isLoggedInncli, async (req, res) => {
 const    id = req.params.id
     const usuario = await pool.query('select * from pacientes where baja="No" and id_usuario= ? ', [id])
    
@@ -264,7 +264,7 @@ router.get('/traerturnos',  async (req, res) => {
   }
 });
 
-router.post('/modificarusuario',isLoggedInn,  async (req, res) => {
+router.post('/modificarusuario',isLoggedInncli,  async (req, res) => {
   try {
     const { id, ...datos } = req.body;
 
@@ -611,6 +611,63 @@ router.post('/agregarPersona',  async (req, res) => {
 });
 
 
+
+
+
+
+
+
+router.post('/agregarespecialidad', async (req, res) => {
+  try {
+    const { usuarioid, nombre } = req.body;
+console.log(usuarioid, nombre)
+    // Validaciones
+    if (!usuarioid) {
+      return res.status(400).json({
+        message: 'El usuarioid es obligatorio'
+      });
+    }
+
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({
+        message: 'El nombre de la especialidad es obligatorio'
+      });
+    }
+
+    // Insertar especialidad
+    const resultado = await pool.query(
+      `INSERT INTO especialidades 
+       (nombre, id_medico)
+       VALUES (?, ?)`,
+      [
+        nombre.trim(),
+        usuarioid
+      ]
+    );
+
+    return res.status(201).json({
+      message: 'Especialidad agregada correctamente',
+     // id: resultado.insertId,
+      nombre: nombre.trim(),
+      ig_medico: usuarioid
+    });
+
+  } catch (error) {
+    console.error('Error al agregar especialidad:', error);
+
+    return res.status(500).json({
+      message: 'Error al agregar la especialidad',
+      error: error.message
+    });
+  }
+});
+
+
+
+
+
+
+
 router.get('/estadoSolicitud/:id', async (req, res) => {
   const id = req.params.id;
 
@@ -670,13 +727,45 @@ router.get('/datospaciente/:id', async (req, res) => {
 
 })
 ////////////////////traerusuario
-
-
 router.get('/traerperfil/:id', async (req, res) => {
-  const { id } = req.params;
-const usuariod =  await pool.query('select * from usuarios where id =?', [id])
-res.json(usuariod[0])
-})
+  try {
+    const { id } = req.params;
+
+    // Buscar usuario
+    const usuarios = await pool.query(
+      'SELECT * FROM usuarios WHERE id = ?',
+      [id]
+    );
+
+    if (usuarios.length === 0) {
+      return res.status(404).json({
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    const usuario = usuarios[0];
+
+    // Buscar todas las especialidades del médico
+    const especialidades = await pool.query(
+      'SELECT * FROM especialidades WHERE id_medico = ?',
+      [id]
+    );
+console.log(especialidades)
+    // Agregar las especialidades al perfil
+    usuario.especialidades = especialidades;
+
+    res.json(usuario);
+
+  } catch (error) {
+    console.error('Error al traer perfil:', error);
+
+    res.status(500).json({
+      message: 'Error al obtener el perfil'
+    });
+  }
+});
+
+
 router.get('/traerTurnoDetalle/:id', async (req, res) => {
   const { id } = req.params;
 
@@ -1245,32 +1334,67 @@ router.post(
   }
 );
 
-router.post('/nuevoturnodisp',  async (req, res) => {
+router.post('/nuevoturnodisp', async (req, res) => {
   try {
-    let { fecha, hora, observaciones, id_usuario } = req.body;
+    let {
+      fecha,
+      hora,
+      observaciones,
+      id_usuario,
+      duracion
+    } = req.body;
+
     // Validaciones mínimas
     if (!fecha || !hora) {
-      return res.status(400).json({ message: "Fecha y hora son obligatorias" });
+      return res.status(400).json({
+        message: "Fecha y hora son obligatorias"
+      });
     }
 
-    // Si observaciones viene vacío → texto por defecto
+    // Duración por defecto
+    if (!duracion) {
+      duracion = 30;
+    }
+
+    // Validar duración permitida
+    duracion = Number(duracion);
+
+    if (![30, 45, 60, 90].includes(duracion)) {
+      return res.status(400).json({
+        message: "La duración debe ser 30, 45, 60 o 90 minutos"
+      });
+    }
+
+    // Si observaciones viene vacío
     if (!observaciones || observaciones.trim() === "") {
       observaciones = "Sin observaciones";
     }
 
     const sql = `
       INSERT INTO turnos
-      (fecha, hora, observaciones, id_usuario)
-      VALUES (?, ?, ?, ?)
+      (fecha, hora, observaciones, id_usuario, duracion)
+      VALUES (?, ?, ?, ?, ?)
     `;
 
-    await pool.query(sql, [fecha, hora, observaciones, id_usuario]);
+    await pool.query(sql, [
+      fecha,
+      hora,
+      observaciones,
+      id_usuario,
+      duracion
+    ]);
 
-    res.json({ message: "Turno creado correctamente" });
+    res.json({
+      message: "Turno creado correctamente",
+      duracion: duracion
+    });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error al crear turno" });
+
+    res.status(500).json({
+      message: "Error al crear turno"
+    });
   }
 });
 
@@ -1367,7 +1491,7 @@ await pool.query(
 
     // 4. Crear preferencia de pago
 const preference = new Preference(client);
-
+ 
     const result = await preference.create({
       body: {
         items: [
@@ -1379,12 +1503,13 @@ const preference = new Preference(client);
           },
         ],
         external_reference: String(id_turno), // MUY IMPORTANTE
-       
+     
         notification_url: API+"clinica/webhook",
+        
      back_urls: {
-  success: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/success",
-  failure: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/failure",
-  pending: "https://unideographic-deborah-winnable.ngrok-free.dev/clinica/pending",
+  success: API+"clinica/success",
+  failure:API+ "clinica/failure",
+  pending: API+"clinica/pending",
 },
 auto_return: "approved",
       },

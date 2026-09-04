@@ -4,11 +4,7 @@ const router = express.Router();
 import passport from "passport";
 import pool from "../database.js";
 
-import {
-  isLoggedIn,
-  isLoggedInn,
-  isLoggedInn2
-} from "../lib/auth.js";
+
 
 
   router.post('/signupp',passport.authenticate('local.registroadmin', {

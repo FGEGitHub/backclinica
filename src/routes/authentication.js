@@ -15,42 +15,60 @@ import jwt from "jsonwebtoken";
 
 
 
-router.post('/signup', passport.authenticate('local.signup', {
-    successRedirect: '/exitosignup',
-    failureRedirect:'/noexito',
-    failureFlash:true
-
-}))
-
+////Registro
 router.post('/signupcl', (req, res, next) => {
-    passport.authenticate('local.signupcl', { session: false }, (err, user, info) => {
 
-        if (err) {
-            console.error(err);
-            return res.status(500).json({
-                message: 'Error del servidor.'
-            });
-        }
+    // Registro de usuario con Passport
+    passport.authenticate(
+        'local.signupcl',
+        { session: false },
+        (err, user, info) => {
 
-        if (!user) {
-            return res.status(400).json({
-                message: info?.message || 'Registro fallido.'
-            });
-        }
+            if (err) {
+                console.error(err);
 
-        return res.status(201).json({
-            message: 'Registrado exitosamente.',
-            user: {
-                id: user.id,
-                usuario: user.usuario,
-                nombre: user.nombre,
-                nivel: user.nivel
+                return res.status(500).json({
+                    message: 'Error del servidor.'
+                });
             }
-        });
 
-    })(req, res, next);
+            if (!user) {
+                return res.status(400).json({
+                    message: info?.message || 'Registro fallido.'
+                });
+            }
+
+            // Datos que se incluirán en el JWT
+        const userForToken = {
+    id: Number(user.id),
+    usuario: user.usuario,
+    nivel: Number(user.nivel)
+};
+
+            // Generar token JWT
+            const token = jwt.sign(
+                userForToken,
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: '7d'
+                }
+            );
+
+            // Respuesta al frontend
+          return res.status(201).json({
+    message: 'Registrado exitosamente.',
+    user: {
+        id: Number(user.id),
+        usuario: user.usuario,
+        nombre: user.nombre,
+        nivel: Number(user.nivel)
+    },
+    token
 });
 
+        }
+    )(req, res, next);
+});
 
 
 

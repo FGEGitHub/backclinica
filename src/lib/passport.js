@@ -59,7 +59,6 @@ passport.use(
 // =====================================================
 // REGISTRO DE USUARIOS
 // =====================================================
-
 passport.use(
     "local.signupcl",
     new LocalStrategy(
@@ -70,13 +69,13 @@ passport.use(
         },
         async (req, usuario, password, done) => {
             try {
-
+                
                 // Obtener datos adicionales del formulario
                 let { nombre, nivel } = req.body;
 
                 // Nivel predeterminado
                 if (nivel === undefined) {
-                    nivel = 100;
+                    nivel = 1;
                 }
 
                 // Verificar si el usuario ya existe
