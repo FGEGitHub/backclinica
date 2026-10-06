@@ -22,7 +22,7 @@ const API = process.env.VITE_API_URL;
 const client = new MercadoPagoConfig({
   accessToken: MP_ACCESS_TOKEN,
 });
-
+////////////Mercado pago 
 router.post("/crear-preferencia", async (req, res) => {
   try {
     const preference = new Preference(client);
@@ -52,12 +52,11 @@ auto_return: "approved",
     res.status(500).json({ error: "Error Mercado Pago" });
   }
 });
+
 router.post("/success", async (req, res) => {
 console.loft("Pago exitoso:", req.body);
 res.send("¡Pago exitoso! Gracias por su compra.");
 });
-
-
 
 router.post("/webhook", async (req, res) => {
   try {
@@ -96,11 +95,10 @@ try {
     res.sendStatus(500);
   }
 });
+/////////////Fin Mercado pago 
 
 
-
- 
-
+////datos de la clinica, se busca por usuario
 router.get('/traerusuario/:usuario', async (req, res) => {
     const usuario = req.params.usuario
   
@@ -113,7 +111,7 @@ router.get('/traerusuario/:usuario', async (req, res) => {
 
 })
 
-
+///// Traer usuarios/clinicas para elegir 
 router.get('/traerEmpresas/', async (req, res) => {
   
 
@@ -125,6 +123,7 @@ router.get('/traerEmpresas/', async (req, res) => {
 
 })
 
+/////trae lista de pacientes,  la id es para q traiga solo los de la clinica
 router.get('/traerpacientes/:id',isLoggedInncli, async (req, res) => {
 const    id = req.params.id
     const usuario = await pool.query('select * from pacientes where baja="No" and id_usuario= ? ', [id])
@@ -134,7 +133,7 @@ const    id = req.params.id
 
 })
 
-
+///DESconectado, trar todos
 router.get('/traerTurnosDisponibles', async (req, res) => {
   try {
     const turnos = await pool.query(`
@@ -156,7 +155,7 @@ router.get('/traerTurnosDisponibles', async (req, res) => {
     res.status(500).json({ error: 'Error al traer turnos' });
   }
 });
-
+///DESconectado, trar todos los turnos de uan clinica y agrega si es paga 
 router.get('/traerTurnosDisponibles/:id', async (req, res) => {
   try {
 
@@ -187,6 +186,7 @@ router.get('/traerTurnosDisponibles/:id', async (req, res) => {
     res.status(500).json({ error: 'Error al traer turnos' });
   }
 });
+
 
 router.get('/traerturnosusuario/:id', async (req, res) => {
   try {
@@ -612,11 +612,6 @@ router.post('/agregarPersona',  async (req, res) => {
 
 
 
-
-
-
-
-
 router.post('/agregarespecialidad', async (req, res) => {
   try {
     const { usuarioid, nombre } = req.body;
@@ -663,11 +658,6 @@ console.log(usuarioid, nombre)
 });
 
 
-
-
-
-
-
 router.get('/estadoSolicitud/:id', async (req, res) => {
   const id = req.params.id;
 
@@ -710,8 +700,6 @@ router.get('/estadoSolicitud/:id', async (req, res) => {
 });
 
 
-
-
 router.get('/datospaciente/:id', async (req, res) => {
   const id = req.params.id
   try {  const chiques = await pool.query('select * from pacientes where id =?', [id])
@@ -726,6 +714,8 @@ router.get('/datospaciente/:id', async (req, res) => {
   }
 
 })
+
+
 ////////////////////traerusuario
 router.get('/traerperfil/:id', async (req, res) => {
   try {
@@ -1103,8 +1093,6 @@ router.post(
 
 
 
-
-
 ////////referente  a un turno, traer datos del paciente y consultas asociadas a ese turno
 router.post("/guardarConsulta", async (req, res) => {
   const {
@@ -1258,7 +1246,6 @@ router.post("/guardarConsulta", async (req, res) => {
     });
   }
 });
-
 
 
 // ==========================================
@@ -1641,6 +1628,11 @@ router.post("/confirmarTurnoNoPago", async (req, res) => {
     });
   }
 });
+
+
+
+
+
 //cron.schedule("*/1 * * * *", async () => {
   /* try {
 
@@ -1661,6 +1653,22 @@ router.post("/confirmarTurnoNoPago", async (req, res) => {
     console.log(error);
   } 
 }); */
+
+
+
+
+
+router.get('/PACIENTESCONMASTURNOS/', async (req, res) => {
+  
+
+    res.json("usuario")
+
+
+})
+
+
+
+
 
 
 
