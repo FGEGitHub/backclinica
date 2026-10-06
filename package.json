@@ -21,6 +21,7 @@
     "mariadb": "^3.5.3",
     "mercadopago": "^3.4.0",
     "morgan": "^1.11.0",
+    "multer": "^2.4.0",
     "node-cron": "^4.6.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
