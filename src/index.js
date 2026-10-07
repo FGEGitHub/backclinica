@@ -67,11 +67,16 @@ import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/authentication.js";
 import administracionRoutes from "./routes/administracion.js";
 import clinicaRoutes from "./routes/clinica.js";
+import vlRoutes from "./routes/vl.js";
+
 
 app.use(indexRoutes);
 app.use(authRoutes);
 app.use("/administracion", administracionRoutes);
 app.use("/clinica", clinicaRoutes);
+app.use("/vl", vlRoutes);
+
+
 
 // ==============================
 // Public
