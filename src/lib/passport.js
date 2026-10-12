@@ -6,7 +6,6 @@ import helpers from "../lib/helpers.js";
 // =====================================================
 // LOGIN
 // =====================================================
-
 passport.use(
     "local.signincli",
     new LocalStrategy(
@@ -17,7 +16,7 @@ passport.use(
         async (usuario, password, done) => {
             try {
                 // Buscar usuario en la base de datos
-                const rows = await pool.query(
+                const [rows] = await pool.query(
                     "SELECT * FROM usuarios WHERE usuario = ?",
                     [usuario]
                 );
@@ -42,6 +41,16 @@ passport.use(
                         message: "Usuario o contraseña incorrectos",
                     });
                 }
+
+                // Obtener el ID de la clínica del usuario
+                const id_clinica = user.id_clinica;
+
+                // VALIDACIÓN PERSONALIZADA:
+                // Acá definís qué condición debe cumplir id_clinica.
+                // Si la validación falla, podés usar:
+                // return done(null, false, { message: "Validación fallida" });
+
+                // Si la validación es exitosa, continúa el login.
 
                 // Login exitoso
                 return done(null, user);
