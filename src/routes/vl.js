@@ -94,7 +94,7 @@ router.get('/clinicas/:id/especialidades', async (req, res) => {
 });
 
 
-
+http://localhost:4000/vl/profesionales?clinicaId=2&especialidad=Dermatologia
 router.get('/profesionales', async (req, res) => {
   try {
     const { clinicaId, especialidad } = req.query;
@@ -133,6 +133,67 @@ router.get('/profesionales', async (req, res) => {
     });
   }
 });
+
+
+
+
+////http://localhost:4000/vl/profesionales/2/fechas-disponibles?mes=2026-10 
+router.get('/profesionales/:profesionalId/fechas-disponibles', async (req, res) => {
+  try {
+    const { profesionalId } = req.params;
+    const mes = req.query.mes || new Date().toISOString().slice(0, 7);
+
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) {
+      return res.status(400).json({
+        error: 'El parámetro mes debe tener formato YYYY-MM'
+      });
+    }
+
+    // Obtener los días de atención del profesional
+    const horarios = await pool.query(
+      `SELECT DISTINCT dia
+       FROM horarios
+       WHERE usuario_id = ?`,
+      [profesionalId]
+    );
+
+    const diasLaborales = new Set(
+      horarios.map(h => Number(h.dia))
+    );
+
+    const [anio, numeroMes] = mes.split('-').map(Number);
+    const ultimoDia = new Date(anio, numeroMes, 0).getDate();
+
+    const fechasDisponibles = [];
+
+    for (let dia = 1; dia <= ultimoDia; dia++) {
+      const fecha = new Date(anio, numeroMes - 1, dia);
+
+      // Lunes = 1, martes = 2, ..., domingo = 7
+      const diaSemana = fecha.getDay() === 0
+        ? 7
+        : fecha.getDay();
+
+      if (diasLaborales.has(diaSemana)) {
+        fechasDisponibles.push(
+          `${anio}-${String(numeroMes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+        );
+      }
+    }
+
+    return res.status(200).json({
+      fechasDisponibles
+    });
+
+  } catch (error) {
+    console.error('Error al obtener fechas disponibles:', error);
+
+    return res.status(500).json({
+      error: 'Error al obtener las fechas disponibles'
+    });
+  }
+});
+
 
 
 
