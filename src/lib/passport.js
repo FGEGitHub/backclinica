@@ -6,22 +6,22 @@ import helpers from "../lib/helpers.js";
 // =====================================================
 // LOGIN
 // =====================================================
+
 passport.use(
     "local.signincli",
     new LocalStrategy(
         {
             usernameField: "usuario",
             passwordField: "password",
+            passReqToCallback: true,
         },
-        async (usuario, password, done) => {
+        async (req, usuario, password, done) => {
             try {
-                // Buscar usuario en la base de datos
-                const [rows] = await pool.query(
+                const rows = await pool.query(
                     "SELECT * FROM usuarios WHERE usuario = ?",
                     [usuario]
                 );
 
-                // Verificar si el usuario existe
                 if (rows.length === 0) {
                     return done(null, false, {
                         message: "Usuario o contraseña incorrectos",
@@ -30,7 +30,6 @@ passport.use(
 
                 const user = rows[0];
 
-                // Verificar contraseña
                 const validPassword = await helpers.matchPassword(
                     password,
                     user.password
@@ -42,22 +41,18 @@ passport.use(
                     });
                 }
 
-                // Obtener el ID de la clínica del usuario
+                // Obtener el ID de la clínica
                 const id_clinica = user.id_clinica;
 
-                // VALIDACIÓN PERSONALIZADA:
-                // Acá definís qué condición debe cumplir id_clinica.
-                // Si la validación falla, podés usar:
-                // return done(null, false, { message: "Validación fallida" });
+                console.log("ID de la clínica:", id_clinica);
 
-                // Si la validación es exitosa, continúa el login.
+                // Agregarlo al objeto del usuario
+                user.id_clinica = id_clinica;
 
-                // Login exitoso
                 return done(null, user);
 
             } catch (error) {
                 console.error("Error en local.signincli:", error);
-
                 return done(error);
             }
         }
