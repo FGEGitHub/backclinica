@@ -12,10 +12,13 @@ import {
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import passport from "passport";
+import jwt from "jsonwebtoken";
 
-
-
-
+import {
+    autenticarToken,
+    obtenerHashToken
+} from "../middlewares/autenticarToken.js";
 
 /* 
 
@@ -143,7 +146,7 @@ http://localhost:4000/vl/profesionales?clinicaId=2&especialidad=Dermatologia
 
 
 ////http://localhost:4000/vl/profesionales?clinicaId=2&especialidad=Cardiologia
-router.get('/profesionales', async (req, res) => {
+router.get('/profesionales', autenticarToken, async (req, res) => {
   try {
     const { clinicaId, especialidad } = req.query;
 
@@ -401,9 +404,294 @@ router.post('/turnos', async (req, res) => {
 
 
 
+////////login
+
+router.post(
+    '/auth/login',
+
+    passport.authenticate('local.signincli', {
+        session: false
+    }),
+
+    async (req, res) => {
+        try {
+            const user = req.user;
+
+            // Buscar la clínica asociada al usuario
+            const rowsClinica = await pool.query(
+                "SELECT * FROM clinicas WHERE id = ?",
+                [user.id_clinica]
+            );
+
+            if (rowsClinica.length === 0) {
+                return res.status(404).json({
+                    message: 'No se encontró la clínica asociada al usuario'
+                });
+            }
+
+            const clinica = rowsClinica[0];
+
+            // Datos que contendrá el token
+            const userForToken = {
+                id: user.id,
+                usuario: user.usuario,
+                nivel: user.nivel,
+                id_clinica: user.id_clinica
+            };
+
+            const token = jwt.sign(
+                userForToken,
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: '7d'
+                }
+            );
+
+            // Respuesta del login
+            return res.json({
+                user: {
+                    id: user.id,
+                    username: user.usuario,
+                    firstName: user.nombre,
+                    lastName: user.apellido,
+                    role: user.rol ?? user.nivel,
+                    professionalId: user.id_profesional ?? null
+                },
+
+                clinicId: user.id_clinica,
+
+                clinic: {
+                    id: clinica.id,
+                    name: clinica.nombre,
+                    address: clinica.direccion,
+                    city: clinica.ciudad,
+                    phone: clinica.telefono
+                },
+
+                token
+            });
+
+        } catch (error) {
+            console.error('Error en /auth/login:', error);
+
+            return res.status(500).json({
+                message: 'Error interno al iniciar sesión'
+            });
+        }
+    }
+);
 
 
 
+
+
+// Obtener y validar la sesión actual
+router.get('/auth/me', autenticarToken, async (req, res) => {
+    try {
+        const rowsUsuario = await pool.query(
+            `SELECT *
+             FROM usuarios
+             WHERE id = ?
+             LIMIT 1`,
+            [req.user.id]
+        );
+
+        if (rowsUsuario.length === 0) {
+            return res.status(401).json({
+                message: 'El usuario ya no existe'
+            });
+        }
+
+        const user = rowsUsuario[0];
+
+        const rowsClinica = await pool.query(
+            `SELECT *
+             FROM clinicas
+             WHERE id = ?
+             LIMIT 1`,
+            [user.id_clinica]
+        );
+
+        if (rowsClinica.length === 0) {
+            return res.status(404).json({
+                message: 'No se encontró la clínica asociada'
+            });
+        }
+
+        const clinica = rowsClinica[0];
+
+        return res.status(200).json({
+            user: {
+                id: user.id,
+                username: user.usuario,
+                firstName: user.nombre,
+                lastName: user.apellido,
+                role: user.rol ?? user.nivel,
+                professionalId: user.id_profesional ?? null
+            },
+
+            clinicId: user.id_clinica,
+
+            clinic: {
+                id: clinica.id,
+                name: clinica.nombre,
+                address: clinica.direccion,
+                city: clinica.ciudad,
+                phone: clinica.telefono
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en /auth/me:', error);
+
+        return res.status(500).json({
+            message: 'Error al validar la sesión'
+        });
+    }
+});
+
+
+
+router.post('/auth/logout', autenticarToken, async (req, res) => {
+    try {
+        const tokenHash = obtenerHashToken(req.token);
+
+        const expiraEn = new Date(req.user.exp * 1000)
+            .toISOString()
+            .slice(0, 19)
+            .replace('T', ' ');
+
+        await pool.query(
+            `INSERT INTO tokens_revocados
+                (token_hash, expira_en)
+             VALUES (?, ?)`,
+            [tokenHash, expiraEn]
+        );
+
+        return res.status(200).json({
+            message: 'Sesión cerrada exitosamente'
+        });
+
+    } catch (error) {
+        console.error('Error en /auth/logout:', error);
+
+        return res.status(500).json({
+            message: 'Error al cerrar la sesión'
+        });
+    }
+});
+
+
+
+
+///////////http://localhost:4000/vl/clinicas/1/turnos
+///Parámetro	Qué hace	Ejemplo
+///fecha	Busca turnos de una fecha específica	fecha=2026-10-14
+///profesionalId	Filtra por ID del profesional	profesionalId=5
+///estado	Por ahora devuelve error, porque todavía no configuramos ese filtro	estado=confirmado
+
+router.get(
+    '/clinicas/:clinicId/turnos',
+    autenticarToken,
+    async (req, res) => {
+        try {
+            const { clinicId } = req.params;
+            const { fecha, profesionalId, estado } = req.query;
+
+            if (!/^\d+$/.test(clinicId)) {
+                return res.status(400).json({
+                    message: 'clinicId inválido'
+                });
+            }
+
+            // Validar acceso a la clínica
+            if (
+                Number(req.user.id_clinica) !== Number(clinicId)
+            ) {
+                return res.status(403).json({
+                    message: 'No tenés acceso a esta clínica'
+                });
+            }
+
+            // Filtrar siempre por la clínica solicitada
+            const condiciones = [
+                't.id_clinica = ?',
+                't.fecha IS NOT NULL'
+            ];
+
+            const parametros = [clinicId];
+
+            // Filtro por fecha
+            if (fecha) {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+                    return res.status(400).json({
+                        message: 'La fecha debe tener formato YYYY-MM-DD'
+                    });
+                }
+
+                condiciones.push('t.fecha = ?');
+                parametros.push(fecha);
+            }
+
+            // Filtro por profesional
+            if (profesionalId) {
+                if (!/^\d+$/.test(profesionalId)) {
+                    return res.status(400).json({
+                        message: 'profesionalId inválido'
+                    });
+                }
+
+                condiciones.push('t.id_usuario = ?');
+                parametros.push(profesionalId);
+            }
+
+            // El filtro estado queda pendiente hasta confirmar
+            // el nombre de la columna y sus valores en la tabla.
+            if (estado) {
+                return res.status(400).json({
+                    message: 'El filtro estado todavía no está implementado'
+                });
+            }
+
+            const turnos = await pool.query(
+                `SELECT
+                    t.id,
+                    t.id_clinica AS clinicId,
+                    t.id_usuario AS professionalId,
+                    t.fecha AS date,
+                    TIME_FORMAT(t.hora, '%H:%i') AS time
+                 FROM turnos t
+                 WHERE ${condiciones.join(' AND ')}
+                 ORDER BY t.fecha ASC, t.hora ASC`,
+                parametros
+            );
+
+            // Convertir BigInt a string para evitar errores de JSON
+            const turnosJSON = turnos.map((turno) =>
+                Object.fromEntries(
+                    Object.entries(turno).map(([clave, valor]) => [
+                        clave,
+                        typeof valor === 'bigint'
+                            ? valor.toString()
+                            : valor
+                    ])
+                )
+            );
+
+            return res.status(200).json(turnosJSON);
+
+        } catch (error) {
+            console.error(
+                'Error al obtener turnos de clínica:',
+                error
+            );
+
+            return res.status(500).json({
+                message: 'Error al obtener los turnos de la clínica'
+            });
+        }
+    }
+);
 
 
 

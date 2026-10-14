@@ -1,3 +1,4 @@
+
 if (typeof File === "undefined") {
     global.File = class {};
 }
@@ -7,7 +8,6 @@ import morgan from "morgan";
 import path from "path";
 import passport from "passport";
 import cors from "cors";
-
 import { fileURLToPath } from "url";
 
 // ==============================
@@ -22,6 +22,16 @@ const __dirname = path.dirname(__filename);
 // ==============================
 
 import "./lib/passport.js";
+
+// ==============================
+// Routes
+// ==============================
+
+import indexRoutes from "./routes/index.js";
+import authRoutes from "./routes/authentication.js";
+import administracionRoutes from "./routes/administracion.js";
+import clinicaRoutes from "./routes/clinica.js";
+import vlRoutes from "./routes/vl.js";
 
 // ==============================
 // App init
@@ -53,7 +63,6 @@ const corsOptions = {
     origin: "*",
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
     optionsSuccessStatus: 200
 };
 
@@ -63,20 +72,11 @@ app.use(cors(corsOptions));
 // Routes
 // ==============================
 
-import indexRoutes from "./routes/index.js";
-import authRoutes from "./routes/authentication.js";
-import administracionRoutes from "./routes/administracion.js";
-import clinicaRoutes from "./routes/clinica.js";
-import vlRoutes from "./routes/vl.js";
-
-
 app.use(indexRoutes);
 app.use(authRoutes);
 app.use("/administracion", administracionRoutes);
 app.use("/clinica", clinicaRoutes);
 app.use("/vl", vlRoutes);
-
-
 
 // ==============================
 // Public
