@@ -31,7 +31,7 @@ import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/authentication.js";
 import administracionRoutes from "./routes/administracion.js";
 import clinicaRoutes from "./routes/clinica.js";
-import vlRoutes from "./routes/vl.js";
+import v1Routes from "./routes/v1.js";
 
 // ==============================
 // App init
@@ -76,7 +76,7 @@ app.use(indexRoutes);
 app.use(authRoutes);
 app.use("/administracion", administracionRoutes);
 app.use("/clinica", clinicaRoutes);
-app.use("/vl", vlRoutes);
+app.use("/v1", v1Routes);
 
 // ==============================
 // Public
